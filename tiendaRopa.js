@@ -1,85 +1,98 @@
+const fs = require("fs"); 
+
 class ProductManager {
-  constructor() {
-    this.productos = [];
-    this.nextId = 1;
+  constructor(filePath) {
+    this.path = filePath;
   }
 
-  agregarProducto(
-    nombreProducto,
-    descripcion,
-    precio,
-    thumbnail,
-    codigo,
-    stock
-  ) {
-    if (
-      !nombreProducto ||
-      !descripcion ||
-      !precio ||
-      !thumbnail ||
-      !codigo ||
-      !stock
-    ) {
-      return "Todos los campos son obligatorios";
+ 
+  getProducts() {
+    try {
+      const data = fs.readFileSync(this.path, "utf8");
+      return JSON.parse(data);
+    } catch (error) {
+      return [];
     }
-
-    if (this.productos.some((producto) => producto.codigo === codigo)) {
-      return "El producto ya existe";
-    }
-
-    precio = parseFloat(precio);
-
-    const producto = {
-      id: this.nextId,
-      nombreProducto,
-      descripcion,
-      precio,
-      thumbnail,
-      codigo,
-      stock,
-    };
-    this.productos.push(producto);
-    this.nextId++;
   }
 
-  getProductos() {
-    return this.productos;
+
+  addProduct(product) {
+    const products = this.getProducts();
+
+    
+    const lastProduct = products[products.length - 1];
+    product.id = lastProduct ? lastProduct.id + 1 : 1;
+
+    products.push(product);
+
+    
+    fs.writeFileSync(this.path, JSON.stringify(products, null, 2));
+
+    return product;
   }
 
-  getProductosById(id) {
-    const producto = this.productos.find((producto) => producto.id === id);
-    if (producto) {
-      return producto;
+  
+  getProductById(id) {
+    const products = this.getProducts();
+    return products.find((product) => product.id === id);
+  }
+
+  
+  updateProduct(id, updatedProduct) {
+    const products = this.getProducts();
+    const index = products.findIndex((product) => product.id === id);
+
+    if (index !== -1) {
+      
+      updatedProduct.id = id;
+      products[index] = updatedProduct;
+      fs.writeFileSync(this.path, JSON.stringify(products, null, 2));
+      return updatedProduct;
     } else {
-      console.error("Producto no encontrado.");
-      // return "Producto no encontrado";
+      return null; 
     }
+  }
+
+  
+  deleteProduct(id) {
+    const products = this.getProducts();
+    const updatedProducts = products.filter((product) => product.id !== id);
+    fs.writeFileSync(this.path, JSON.stringify(updatedProducts, null, 2));
   }
 }
 
-const productManager = new ProductManager();
+module.exports = ProductManager;
 
-productManager.agregarProducto(
-  "Camisa",
-  "Camisa de algodón",
-  25000,
-  "camisa.jpg",
-  "001",
-  30
-);
 
-productManager.agregarProducto(
-  "Pantalón",
-  "Pantalon de mezclilla",
-  30000,
-  "pantalon.jpg",
-  "002",
-  30
-);
+const productManager = new ProductManager("products.json");
 
-console.log(productManager.getProductos());
 
-const productById = productManager.getProductosById(1);
-console.log(productById);
+productManager.addProduct({
+  title: "Camiseta",
+  description: "Camiseta de algodón",
+  price: 19.99,
+  thumbnail: "camiseta.jpg",
+  code: "CAM001",
+  stock: 100,
+});
 
-const productoNoEncontrado = productManager.getProductosById(3);
+
+const allProducts = productManager.getProducts();
+console.log(allProducts);
+
+
+const product = productManager.getProductById(1);
+console.log(product);
+
+
+productManager.updateProduct(1, {
+  title: "Nueva Camiseta",
+  description: "Camiseta de algodón mejorada",
+  price: 24.99,
+  thumbnail: "nueva_camiseta.jpg",
+  code: "CAM002",
+  stock: 150,
+});
+
+
+productManager.deleteProduct(1);
